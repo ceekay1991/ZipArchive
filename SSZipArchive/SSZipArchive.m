@@ -724,4 +724,121 @@
     return date;
 }
 
++ (BOOL)UnzipIsEncrypted:(NSString *)path {
+    zipFile _unzFile = unzOpen((const char*)[path UTF8String]);
+    int ret = unzGoToFirstFile( _unzFile );
+    if (ret == UNZ_OK) {
+        do {
+            ret = unzOpenCurrentFile( _unzFile );
+            if( ret!=UNZ_OK ) {
+                return NO;
+            }
+            unz_file_info   fileInfo ={0};
+            ret = unzGetCurrentFileInfo(_unzFile, &fileInfo, NULL, 0, NULL, 0, NULL, 0);
+            if (ret!= UNZ_OK) {
+                return NO;
+            }
+            else if((fileInfo.flag & 1) == 1) {
+                return YES;
+            }
+            
+            unzCloseCurrentFile( _unzFile );
+            ret = unzGoToNextFile( _unzFile );
+        } while( ret==UNZ_OK && UNZ_OK!=UNZ_END_OF_LIST_OF_FILE );
+        
+    }
+    
+    return NO;
+}
++ (BOOL)pwdIsCorrect:(NSString *)password ofFile:(NSString *)path
+{
+    NSString *destination = [path stringByDeletingLastPathComponent];
+    // Begin opening
+    
+    zipFile zip = unzOpen((const char*)[path UTF8String]);
+    if (zip == NULL) {
+        return NO;
+    }
+    unz_global_info  globalInfo = {0ul, 0ul};
+    unzGetGlobalInfo(zip, &globalInfo);
+    // Begin unzipping
+    if (unzGoToFirstFile(zip) != UNZ_OK) {
+        return NO;
+    }
+    int ret = 0;
+    unsigned char buffer[4096] = {0};
+    
+    do {
+        
+        @autoreleasepool {
+            if ([password length] == 0) {
+                ret = unzOpenCurrentFile(zip);
+            } else {
+                ret = unzOpenCurrentFilePassword(zip, [password cStringUsingEncoding:NSASCIIStringEncoding]);
+            }
+            
+            if (ret != UNZ_OK) {
+                
+                unzClose(zip);
+                return NO;
+            }
+            
+            // Reading data and write to file
+            unz_file_info fileInfo;
+            memset(&fileInfo, 0, sizeof(unz_file_info));
+            
+            ret = unzGetCurrentFileInfo(zip, &fileInfo, NULL, 0, NULL, 0, NULL, 0);
+            if (ret != UNZ_OK) {
+                
+                unzCloseCurrentFile(zip);
+                unzClose(zip);
+                return NO;
+            }
+            
+            if (fileInfo.compressed_size==fileInfo.uncompressed_size==0) {
+                unzCloseCurrentFile( zip );
+                ret = unzGoToNextFile( zip );
+                continue;
+            }
+            char *filename = (char *)malloc(fileInfo.size_filename + 1);
+            unzGetCurrentFileInfo(zip, &fileInfo, filename, fileInfo.size_filename + 1, NULL, 0, NULL, 0);
+            filename[fileInfo.size_filename] = '\0';
+            
+            
+            // Check if it contains directory
+            NSString *strPath = [NSString stringWithCString:filename encoding:NSUTF8StringEncoding];
+            BOOL isDirectory = NO;
+            if (filename[fileInfo.size_filename-1] == '/' || filename[fileInfo.size_filename-1] == '\\') {
+                isDirectory = YES;
+            }
+            free(filename);
+            
+            // Contains a path
+            if ([strPath rangeOfCharacterFromSet:[NSCharacterSet characterSetWithCharactersInString:@"/\\"]].location != NSNotFound) {
+                strPath = [strPath stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+            }
+            
+            NSString *fullPath = [destination stringByAppendingPathComponent:strPath];
+            
+            FILE *fp = fopen((const char*)[fullPath UTF8String], "wb");
+            if (fp) {
+                int readBytes = unzReadCurrentFile(zip, buffer, 4096);
+                unzClose(zip);
+                fclose(fp);
+                return readBytes>=0;
+            }
+            else
+            {
+                unzClose(zip);
+                return NO;
+            }
+            
+            
+        }
+    }while (ret == UNZ_OK && ret != UNZ_END_OF_LIST_OF_FILE );
+    
+    
+    return YES;
+}
+
 @end
