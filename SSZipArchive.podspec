@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
-  s.name         = 'ZipArchiveFork'
+  s.name         = 'SSZipArchive'
   s.version      = '1.3.0'
   s.summary      = 'Utility class for zipping and unzipping files on iOS, tvOS, watchOS, and Mac.'
   s.description  = 'ZipArchiveFork is a simple utility class for zipping and unzipping files on iOS, tvOS, watchOS, and Mac.'
