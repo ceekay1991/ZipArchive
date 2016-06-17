@@ -795,7 +795,7 @@
                 return NO;
             }
             
-            if (fileInfo.compressed_size==fileInfo.uncompressed_size==0) {
+           if (fileInfo.compressed_size==fileInfo.uncompressed_size&&fileInfo.compressed_size==0) {
                 unzCloseCurrentFile( zip );
                 ret = unzGoToNextFile( zip );
                 continue;
