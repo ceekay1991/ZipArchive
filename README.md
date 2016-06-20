@@ -14,7 +14,7 @@ ZipArchive is a simple utility class for zipping and unzipping files on iOS and 
 
 ### CocoaPods
 
-`pod install SSZipArchive`
+`pod install ZipArchiveFork`
 
 ### Manual
 
